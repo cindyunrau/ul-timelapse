@@ -133,13 +133,6 @@ def main():
             job_path = os.path.join(directory, job_uuid)
             start_print(job_path,job["name"])
 
-    if NAME == "BRUNEL":
-        print("restarting")
-        uuid = "110f24b2-1386-426b-b21d-a0710bb97e35"
-        
-        job_path = os.path.join(directory, uuid)
-        end_print(job_path,"test")
-
     while True:
         printer_status_new = get_status()
         job = get_job()
