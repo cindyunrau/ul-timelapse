@@ -5,7 +5,7 @@ Timelapse generation for the Ultimaker 3D Printer onboard camera. Runs infinitel
 
 ## Usage  
 
-    python timelapse.py {IP Address}
+    python timelapse.py {Name} {IP Address}
     
 ## Dependencies
 
