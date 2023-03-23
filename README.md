@@ -10,3 +10,7 @@ Timelapse generation for the Ultimaker 3D Printer onboard camera. Runs infinitel
 ## Dependencies
 
 - ffmpeg
+
+## Development
+
+python
