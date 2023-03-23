@@ -37,8 +37,8 @@ def connection_error(err):
     logging.error('Retrying in 5 seconds...')
     sleep(5)
 
-def init_directory():
-    dir = os.path.join(os.getcwd(),TEMP_DIR)
+def init_directory(directory_name):
+    dir = os.path.join(os.getcwd(),directory_name)
     if not os.path.exists(dir):
         os.mkdir(dir)
         print("Directory '% s' created" % dir) 
@@ -71,8 +71,10 @@ def start_print(tmpdir, job_name):
 def end_print(path,name):
     logging.info('Print Done or Stopped') 
 
+    init_directory(OUT_DIR)
+
     date = datetime.now()
-    out_file = OUT_DIR + '/' + date.year + '-' + date.month + '-' + date.day + '_' + name.strip().replace(" ", "_") + '_' + date.microsecond + '.mp4'
+    out_file = f"{OUT_DIR}/{date.year}-{date.month}-{date.day}_{name.strip().replace(' ', '_')}_{date.microsecond}.mp4"
     in_files = os.path.join(path,IMAGE_FORMAT)
     logging.info("Starting Timelapse Generation")
     logging.info(f"Saving Video as {out_file} to {in_files}")
@@ -108,7 +110,7 @@ def save_image(path,count,job):
         sleep(30)
 
 def main():
-    directory = init_directory()
+    directory = init_directory(TEMP_DIR)
     count = 0
     job_path = None
 
@@ -130,6 +132,13 @@ def main():
         if printer_status == "printing" and job_state == "printing":
             job_path = os.path.join(directory, job_uuid)
             start_print(job_path,job["name"])
+
+    if NAME == "BRUNEL":
+        print("restarting")
+        uuid = "110f24b2-1386-426b-b21d-a0710bb97e35"
+        
+        job_path = os.path.join(directory, uuid)
+        end_print(job_path,"test")
 
     while True:
         printer_status_new = get_status()
@@ -160,6 +169,7 @@ def main():
             if job_state == "printing":
                 count += 1
                 save_image(job_path,count,job)
+
 
 if __name__ == "__main__":
     main()
