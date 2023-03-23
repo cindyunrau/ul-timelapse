@@ -26,10 +26,8 @@ TEMP_DIR = "temp_files"
 OUT_DIR = "video_files"
 IMAGE_FORMAT = "%05d.jpg"
 
-PRINTER_IP = {"ADA" : "142.104.150.249", "BRUNEL" : "142.104.149.120", "CLAUDIA" : "142.104.149.25"}
 NAME = args.NAME.upper()
 HOST = HTTP + args.IP
-HOST = HTTP + PRINTER_IP[NAME]
 
 logging.basicConfig(filename= NAME.lower()+".log", filemode='a', format='%(asctime)s - %(levelname)s - ' + NAME + ' - %(message)s', 
                     datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
