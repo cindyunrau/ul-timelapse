@@ -1,7 +1,4 @@
 import os
-import requests
-from requests import HTTPError, ConnectionError, Timeout, RequestException
-from time import sleep
 
 API_PREFIX = "/api/v1/"
 SYSTEM = API_PREFIX + "system"
@@ -11,9 +8,10 @@ CAMERA = API_PREFIX + "camera"
 HISTORY = API_PREFIX + "history"
 
 class Printer:
-    def __init__(self, ip):
+    def __init__(self, session, ip):
         self.ip = ip
         self.host = "http://" + ip
+        self.session = session
 
         self.name = self.req_name()
         self.guid = self.req_guid()
@@ -21,10 +19,10 @@ class Printer:
 
     def get(self, url):
         try:
-            res = requests.get(url)
+            res = self.session.get(url)
             res.raise_for_status()
-        except HTTPError as err:
-            print(err)
+        except Exception as e:
+            print(e)
 
         return res
 
@@ -61,6 +59,7 @@ class Printer:
 class PrintJob:
     def __init__(self, printer, temp_dir, num_images):
         self.host = printer.host
+        self.session = printer.session
 
         self.content = self.req_job()
         self.name = self.content['name']
@@ -74,10 +73,10 @@ class PrintJob:
 
     def get(self, url):
         try:
-            res = requests.get(url)
+            res = self.session.get(url)
             res.raise_for_status()
-        except HTTPError as err:
-            print(err)
+        except Exception as e:
+            print(e)
 
         return res
 
