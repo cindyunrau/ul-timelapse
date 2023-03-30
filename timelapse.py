@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime
 import subprocess
 from time import sleep
+import requests
 from requests.adapters import HTTPAdapter, Retry
 
 from api import Printer, PrintJob
@@ -27,7 +28,7 @@ args = argParser.parse_args()
 NAME = args.NAME.upper()
 IP = args.IP
 
-LOG_FILE = "asdf.log"
+LOG_FILE = "print.log"
 
 logging.basicConfig(filename= LOG_FILE, filemode='a', format='%(asctime)s - %(levelname)s - ' + NAME + ' - %(message)s', 
                     datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
@@ -101,47 +102,56 @@ def main():
     o_path = init_directory(OUT_DIR)
 
     num_images = (FPS * VID_LENGTH)
+    post_frame_count = 0
 
-    # session = requests.Session()
-    # retries = Retry(total = 5, backoff_factor = 0.5, status_forcelist = [429, 500, 502, 503, 504])
-    # session.mount('http://', HTTPAdapter(max_retries = retries))
+    session = requests.Session()
+    retries = Retry(total = 5, backoff_factor = 0.5, status_forcelist = [429, 500, 502, 503, 504])
+    session.mount('http://', HTTPAdapter(max_retries = retries))
 
-    printer = Printer(IP)
+    printer = Printer(session, IP)
 
     if(printer.status == "printing"):
-        curr_job = PrintJob(printer, t_path, num_images)
-        init_directory(curr_job.path)
+        job = PrintJob(printer, t_path, num_images)
 
-        if os.path.exists(curr_job.path):
-            curr_job.image_count = len(os.listdir(curr_job.path))
+        if(job.state == "printing"):
+            init_directory(job.path)
 
-        logging.info('Job on start-up: %s' % curr_job)
+        if os.path.exists(job.path):
+            job.image_count = len(os.listdir(job.path))
+
+        logging.info('Job on start-up: %s' % job)
 
     while True:
         prev_printer_status = printer.status
-        prev_job_state = curr_job.state
+        prev_job_state = job.state
         printer.update()
-        curr_job.update()
+        job.update()
 
         if prev_printer_status != printer.status:
             logging.info('Printer Status Change: %s -> %s', prev_printer_status, printer.status)
                 
         if printer.status == "printing":
-            if prev_job_state != curr_job.state:
-                logging.info('Job State Change: %s -> %s', prev_job_state, curr_job.state)
+            if prev_job_state != job.state:
+                logging.info('Job State Change: %s -> %s', prev_job_state, job.state)
 
-                if curr_job.state == "pre_print":
-                    curr_job = PrintJob(printer, t_path, num_images)
-                    start_print(curr_job.path,str(curr_job))
+                if job.state == "pre_print":
+                    job = PrintJob(printer, t_path, num_images)
+                    start_print(job.path,str(job))
                 
-                if curr_job.state == "post_print":
-                    end_print(t_path,o_path,curr_job.name)
+                if job.state == "post_print":
+                    if post_frame_count < FPS:
+                        post_frame_count += 1
+                        save_image(job.path, printer.req_snapshot(),job.image_count)
+                        sleep(job.shoot_interval)
+                    else:
+                        post_frame_count = 0
+                        end_print(t_path,o_path,job.name)
 
-            if curr_job.state == "printing":
-                print("Current Job:  %s" % str(curr_job), end='\r')
-                curr_job.increment_count()
-                save_image(curr_job.path, printer.req_snapshot(),curr_job.image_count)
-                sleep(curr_job.shoot_interval)
+            if job.state == "printing":
+                print("Current Job:  %s" % str(job), end='\r')
+                job.increment_count()
+                save_image(job.path, printer.req_snapshot(),job.image_count)
+                sleep(job.shoot_interval)
 
 if __name__ == "__main__":
     try:
