@@ -16,29 +16,23 @@ class Printer:
         self.name = self.req_name()
         self.guid = self.req_guid()
         self.status = self.req_status()
-
+    
     def get(self, url):
         try:
             res = self.session.get(url)
             res.raise_for_status()
         except Exception as e:
             print(e)
+            return 'none'
 
         return res
 
     def req_status(self):
         res = self.get(self.host + PRINTER + "/status")
         return res.text.strip('"')
-    
-    def set_status(self, status):
-        self.status = status
 
     def update(self):
         self.status = self.req_status()
-
-    def req_history(self):
-        res = self.get(self.host + HISTORY)
-        return res.json()
     
     def req_guid(self):
         res = self.get(self.host + SYSTEM + "/guid")
@@ -48,7 +42,7 @@ class Printer:
         res = self.get(self.host + SYSTEM + "/name")
         return res.json()
     
-    def req_snapshot(self):
+    def snapshot(self):
         res = self.get(self.host + CAMERA + "/0/snapshot")
         return res.content
     
@@ -57,46 +51,42 @@ class Printer:
         
 
 class PrintJob:
-    def __init__(self, printer, temp_dir, num_images):
+    def __init__(self, printer, temp_dir):
         self.host = printer.host
         self.session = printer.session
 
-        self.content = self.req_job()
+        self.content = self.get_job()
+        self.state = self.content['state']
         self.name = self.content['name']
         self.uuid = self.content['uuid']
-        self.state = self.content['state']
-        self.shoot_interval = self.content['time_total'] / num_images
         self.progress = float(self.content['progress']) * 100
-
-        self.image_count = 0
+        self.interval = 5 + 5*float(self.content['time_total'])/60
+        
         self.path = os.path.join(temp_dir, self.uuid)
 
-    def get(self, url):
-        try:
-            res = self.session.get(url)
-            res.raise_for_status()
-        except Exception as e:
-            print(e)
+        if os.path.exists(self.path):
+            self.image_count = len(os.listdir(self.path))
+        else:
+            self.image_count = 0
 
-        return res
-
-    def req_job(self):
-        res = self.get(self.host + PRINT_JOB)
+    def get_job(self):
+        res = self.session.get(self.host + PRINT_JOB)
+        res.raise_for_status()
+  
         return res.json()
     
     def update(self):
-        self.content = self.req_job()
+        self.content = self.get_job()
+        self.state = self.content['state']
         self.name = self.content['name']
         self.uuid = self.content['uuid']
-        self.state = self.content['state']
         self.progress = float(self.content['progress']) * 100
-
-    def req_name(self):
-        res = self.get(self.host + PRINT_JOB + "/name")
-        return res.text
 
     def increment_count(self):
         self.image_count += 1
     
     def __str__(self):
-        return f"Print Job: {self.name}  UUID: {self.uuid}  State: {self.state}  Progress: {round(self.progress,2)}%"
+        try:
+            return f"Print Job: {self.name}  UUID: {self.uuid}  State: {self.state}  Progress: {round(self.progress,2)}%"
+        except:
+            return f"Print Job: None"
