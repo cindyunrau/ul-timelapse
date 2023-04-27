@@ -1,3 +1,6 @@
 /temp_files
 /video_files
 *.log
+__pycache__/
+Makefile
+DSC_README.md
