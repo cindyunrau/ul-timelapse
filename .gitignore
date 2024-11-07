@@ -1,5 +1,5 @@
-/temp_files
-/video_files
+/temp
+/video
 *.log
 __pycache__/
 Makefile
