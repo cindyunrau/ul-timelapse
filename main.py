@@ -14,8 +14,9 @@ args = argParser.parse_args()
 
 IP_LIST = args.ip
 OUT_DIR = args.out_dir
+LOG_FILE = "print.log"
 
-logging.basicConfig(filename= print.log, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', 
+logging.basicConfig(filename= LOG_FILE, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', 
                     datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
 
 
