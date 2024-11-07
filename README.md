@@ -23,7 +23,7 @@ pip install -r requirements.txt
 - urllib3==1.26.15
 - logging
 - argparse
-- subprocess
+- subprocess 
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a pull request or report an issue.
