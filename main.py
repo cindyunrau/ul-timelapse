@@ -23,6 +23,7 @@ logger = logging.getLogger("logger")
 def main():
     print("Starting Program Timelapse.py with IP addresses: %s" % IP_LIST)
     print("All logs saved in %s\n" % LOG_FILE)
+    logger.info("-----------------------------------------------")
     logger.info('Starting Program Timelapse.py - HOSTS: %s' % IP_LIST)
 
     post_frame_count = 0
@@ -34,43 +35,44 @@ def main():
 
     printer_manager = PrinterManager(IP_LIST, session)
 
+    print("Initial Printer Status:")
     for printer in printer_manager.printers:
         logger.info('Printer: %s', printer)
+        print(f"Printer: {printer}")
 
     while True:
         for printer in printer_manager.printers:
-            prev_printer_status = printer.status
-            prev_job_state = printer.job_state
-            printer_manager.update_printer(printer)
+            printer_status, job_state = printer_manager.update_printer(printer)
 
-            if prev_printer_status != printer.status:
-                logging.info('%s - Status Change: %s -> %s', printer.name, prev_printer_status, printer.status)
-                if printer.status == "pre_print":
-                    printer_manager.start_job(printer)
-            
-            if printer.status == "printing" and printer.job_state != 'none': 
-                if prev_job_state != printer.job_state:
-                    logging.info('%s - Job State Change: %s -> %s\n%s', printer.name, prev_job_state, printer.job_state, printer)
-                    if printer.job_state == "post_print":
-                        # Capture an extra second after print is completed
-                        if post_frame_count < 30:
-                            post_frame_count += 1
-                            printer_manager.save_image(printer)
-                        else:
-                            post_frame_count = 0
-                            try:
-                                printer_manager.end_job(printer)
-                            except OSError as e:
-                                logging.error("Error Ending Job: %s - %s - %s.", printer.name, e.filename, e.strerror)
-                            try: 
-                                filename = printer_manager.generate_timelapse(printer, OUT_DIR)
-                                logging.info(f"Timelapse Generated: Saved Video as {filename}")
-                            except:
-                                logging.error("Error Generating Timelapse: %s - %s.", printer.name, e.filename, e.strerror)
+            if printer.is_online:
+                if printer_status["prev"] != printer_status["curr"]:
+                    logging.info('%s - Status Change: %s -> %s', (printer.name or printer.ip), printer_status["prev"], printer_status["curr"])
+                    if printer_status["curr"] == "pre_print":
+                        printer_manager.start_job(printer)
+                
+                if printer_status["curr"] == "printing" and job_state["curr"] != 'none': 
+                    if job_state["prev"] != job_state["curr"]:
+                        logging.info('%s - Job State Change: %s -> %s\n%s', (printer.name or printer.ip), job_state["prev"], job_state["curr"], printer)
+                        if job_state["curr"] == "post_print":
+                            # Capture an extra second after print is completed
+                            if post_frame_count < 30:
+                                post_frame_count += 1
+                                printer_manager.save_image(printer)
+                            else:
+                                post_frame_count = 0
+                                try:
+                                    printer_manager.end_job(printer)
+                                except OSError as e:
+                                    logging.error("Error Ending Job: %s - %s - %s.", printer.name, e.filename, e.strerror)
+                                try: 
+                                    filename = printer_manager.generate_timelapse(printer, OUT_DIR)
+                                    logging.info(f"Timelapse Generated: Saved Video as {filename}")
+                                except:
+                                    logging.error("Error Generating Timelapse: %s - %s.", printer.name, e.filename, e.strerror)
 
-                            logging.info(f"Print {printer.job_name} Finished")
-                if(printer.job_state == "printing"):
-                    printer_manager.save_image(printer)
+                                logging.info(f"Print {printer.job_name} Finished")
+                    if(job_state["curr"] == "printing"):
+                        printer_manager.save_image(printer)
 
 if __name__ == "__main__":
     main()

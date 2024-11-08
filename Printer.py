@@ -28,10 +28,11 @@ class Printer:
         self.last_image_timestamp = 0
 
         self.reconnect_time = 0
-        self.num_reconnect = 1
+
+        self.is_online = True
 
     def get(self, url):
-        res = self.session.get(url)
+        res = self.session.get(url, timeout=5)
         res.raise_for_status()
         return res
     
@@ -85,11 +86,12 @@ class Printer:
             self.job_time = self.req_job_time()
             self.progress = float(self.req_job_progress()) * 100
             self.interval = sqrt(float(self.req_job_time()))/8 + 15
-        self.num_reconnect = 1
+        self.is_online = True
     
     def set_offline(self):
         self.reconnect_time = datetime.now().timestamp()
-        self.status = 'offline'
+        self.is_online = False
+        self.status = 'none'
         self.name = 'none'
         self.guid = 'none'
         self.job_state = 'none'
@@ -98,11 +100,10 @@ class Printer:
         self.job_time = 'none'
         self.progress = 'none'
         self.interval = 'none'
-        self.num_reconnect += 1
         
     def reset(self):
         self.reconnect_time = 1
-        self.num_reconnect = 0
+        self.is_online = False
         self.status = 'reset'
         self.job_state = 'none'
         self.job_name = 'none'
@@ -114,7 +115,10 @@ class Printer:
         self.image_count += 1
     
     def __str__(self):
-        try:
-            return f"{self.ip}  NAME: {self.name} GUID: {self.guid}  Status: {self.status}\n\tPrint Job: {self.job_name}  UUID: {self.uuid}  State: {self.job_state}  Total Time: {strftime('%H:%M', gmtime(self.job_time))} Progress: {round(self.progress,2)}%"
-        except:
-            return f"{self.ip} NAME: {self.name} GUID: {self.guid}  Status: {self.status}"
+        if self.is_online:
+            if self.status == 'printing':
+                return f"{self.ip}  NAME: {self.name} GUID: {self.guid}  Status: {self.status}\n\tPrint Job: {self.job_name}  UUID: {self.uuid}  State: {self.job_state}  Total Time: {strftime('%H:%M', gmtime(self.job_time))} Progress: {round(self.progress,2)}%"
+            else:
+                return f"{self.ip} NAME: {self.name} GUID: {self.guid}  Status: {self.status}"
+        else:
+            return f"{self.ip} Status: Offline"   

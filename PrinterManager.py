@@ -36,33 +36,37 @@ class PrinterManager:
         return printer
 
     def printer_online(self, printer):
-        if printer.status != 'offline':
+        if printer.is_online:
             return True
-        else: 
-            if printer.num_reconnect <= 6 and (datetime.now().timestamp() - printer.reconnect_time > 300):
-                return True
-            elif printer.num_reconnect > 6 and (datetime.now().timestamp() - printer.reconnect_time > 3600):
-                return True
+        elif (datetime.now().timestamp() - printer.reconnect_time) > 300:
+            return True
         return False
        
     def update_printer(self, printer):
+        printer_status = {"prev": printer.status, "curr":"none"}
+        job_state = {"prev": printer.job_state, "curr":"none"}
         if self.printer_online(printer):
             try:
                 printer.update()
+                printer_status["curr"] = printer.status
+                job_state["curr"] = printer.job_state
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 404:
-                    logger.error("Printer %s: API returned a 404 error: Not Found", printer.ip)
+                    logger.error("Printer %s: HTML 404 error: Not Found", printer.ip)
                 else:
-                    logger.error("Printer %s: API returned an error: %s", printer.ip, e)
-                if printer.num_reconnect <= 5:
-                    logger.info("Printer %s offline. Will attempt reconnection #%d/5 in 5 minutes.", printer.ip, printer.num_reconnect)
-                else:
-                    logger.info("Printer %s offline. Will attempt reconnection in 1 hour.", printer.ip)
+                    logger.error("Printer %s: HTML %s error: %s", printer.ip, e.response.status_code, e)
+                logger.info("Printer %s offline. Will attempt reconnection in 10 minutes.", printer.ip)
                 printer.set_offline()
-            except Exception as e:
-                logger.error("Printer %s: An error occurred: %s", self.ip, e)
+            except requests.exceptions.ConnectionError as e:
+                logger.error("Printer %s: Connection Error: %s", printer.ip, e)
+                logger.info("Printer %s offline. Will attempt reconnection in 10 minutes.", printer.ip)
+                printer.set_offline()
+            except requests.exceptions.RequestException as e:
+                logger.error("Printer %s: An error occurred: %s", printer.ip, e)
+                logger.info("Printer %s offline. Will attempt reconnection in 10 minutes.", printer.ip)
                 printer.set_offline()
 
+        return printer_status, job_state
 
     def get_img_path(self, printer):
         return os.path.join(self.temp_dir, printer.uuid, "%05d.jpg") % printer.image_count
