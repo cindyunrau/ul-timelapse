@@ -47,7 +47,7 @@ def main():
             if printer.is_online:
                 if printer_status["prev"] != printer_status["curr"]:
                     logging.info('%s - Status Change: %s -> %s', (printer.name or printer.ip), printer_status["prev"], printer_status["curr"])
-                    if printer_status["curr"] == "pre_print":
+                    if job_state["curr"] == "pre_print":
                         printer_manager.start_job(printer)
                 
                 if printer_status["curr"] == "printing" and job_state["curr"] != 'none': 
