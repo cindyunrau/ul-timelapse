@@ -18,12 +18,12 @@ LOG_FILE = "print.log"
 
 logging.basicConfig(filename= LOG_FILE, filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', 
                     datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
-
+logger = logging.getLogger("logger")
 
 def main():
     print("Starting Program Timelapse.py with IP addresses: %s" % IP_LIST)
     print("All logs saved in %s\n" % LOG_FILE)
-    logging.info('Starting Program Timelapse.py - HOSTS: %s' % IP_LIST)
+    logger.info('Starting Program Timelapse.py - HOSTS: %s' % IP_LIST)
 
     post_frame_count = 0
 
@@ -35,13 +35,13 @@ def main():
     printer_manager = PrinterManager(IP_LIST, session)
 
     for printer in printer_manager.printers:
-        logging.info('Printer: %s', printer)
+        logger.info('Printer: %s', printer)
 
     while True:
         for printer in printer_manager.printers:
             prev_printer_status = printer.status
             prev_job_state = printer.job_state
-            printer.update()
+            printer_manager.update_printer(printer)
 
             if prev_printer_status != printer.status:
                 logging.info('%s - Status Change: %s -> %s', printer.name, prev_printer_status, printer.status)

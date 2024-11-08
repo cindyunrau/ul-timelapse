@@ -1,5 +1,6 @@
 from math import sqrt
 from time import strftime, gmtime
+from datetime import datetime
 
 API_PREFIX = "/api/v1/"
 SYSTEM = API_PREFIX + "system"
@@ -7,14 +8,16 @@ PRINTER = API_PREFIX + "printer"
 PRINT_JOB = API_PREFIX + "print_job"
 CAMERA = API_PREFIX + "camera"
 HISTORY = API_PREFIX + "history"
+
 class Printer:
     def __init__(self, ip, session):
+        self.ip = ip
         self.host = "http://" + ip
         self.session = session
 
-        self.name = self.req_name()
-        self.guid = self.req_guid()
-        self.status = self.req_status()
+        self.status = 'starting'
+        self.name = 'none'
+        self.guid = 'none'
         self.job_state = 'none'
         self.job_name = 'none'
         self.uuid = 'none'
@@ -24,21 +27,20 @@ class Printer:
         self.image_count = 0
         self.last_image_timestamp = 0
 
-        self.update()
+        self.reconnect_time = 0
+        self.num_reconnect = 1
 
     def get(self, url):
-        try:
-            res = self.session.get(url)
-            res.raise_for_status()
-        except Exception as e:
-            print(e)
-            return 'none'
-
+        res = self.session.get(url)
+        res.raise_for_status()
         return res
     
     def req_status(self):
         res = self.get(self.host + PRINTER + "/status")
-        return res.text.strip('"')
+        try:
+            return res.text.strip('"')
+        except:
+            return res
     
     def req_guid(self):
         res = self.get(self.host + SYSTEM + "/guid")
@@ -74,6 +76,8 @@ class Printer:
     
     def update(self):
         self.status = self.req_status()
+        self.name = self.req_name()
+        self.guid = self.req_guid()
         if self.status in ["pre-print", "printing"]:
             self.job_state = self.req_job_state()
             self.job_name = self.req_job_name()
@@ -81,9 +85,25 @@ class Printer:
             self.job_time = self.req_job_time()
             self.progress = float(self.req_job_progress()) * 100
             self.interval = sqrt(float(self.req_job_time()))/8 + 15
+        self.num_reconnect = 1
     
+    def set_offline(self):
+        self.reconnect_time = datetime.now().timestamp()
+        self.status = 'offline'
+        self.name = 'none'
+        self.guid = 'none'
+        self.job_state = 'none'
+        self.job_name = 'none'
+        self.uuid = 'none'
+        self.job_time = 'none'
+        self.progress = 'none'
+        self.interval = 'none'
+        self.num_reconnect += 1
+        
     def reset(self):
-        self.status = self.req_status()
+        self.reconnect_time = 1
+        self.num_reconnect = 0
+        self.status = 'reset'
         self.job_state = 'none'
         self.job_name = 'none'
         self.uuid = 'none'
@@ -95,6 +115,6 @@ class Printer:
     
     def __str__(self):
         try:
-            return f"{self.name}  GUID: {self.guid}  Status: {self.status}\n\tPrint Job: {self.job_name}  UUID: {self.uuid}  State: {self.job_state}  Total Time: {strftime('%H:%M', gmtime(self.job_time))} Progress: {round(self.progress,2)}%"
+            return f"{self.ip}  NAME: {self.name} GUID: {self.guid}  Status: {self.status}\n\tPrint Job: {self.job_name}  UUID: {self.uuid}  State: {self.job_state}  Total Time: {strftime('%H:%M', gmtime(self.job_time))} Progress: {round(self.progress,2)}%"
         except:
-            return f"{self.name}  GUID: {self.guid}  Status: {self.status}"
+            return f"{self.ip} NAME: {self.name} GUID: {self.guid}  Status: {self.status}"
